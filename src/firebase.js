@@ -6,6 +6,7 @@ import {
   addDoc,
   updateDoc,
   doc,
+  setDoc,
   serverTimestamp,
 } from 'firebase/firestore';
 
@@ -62,3 +63,17 @@ export const addEvent = async (eventData) => {
     throw error;
   }
 };
+
+export const addSale = async (saleData) => {
+  try {
+    await addDoc(collection(db, 'sales'), {
+      ...saleData,
+      createdAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error adding sale:', error);
+    throw error;
+  }
+};
+
+export { setDoc, doc };

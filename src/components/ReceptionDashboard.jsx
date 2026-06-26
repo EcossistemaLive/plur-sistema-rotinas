@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { initialTasks } from '../data/mockData';
 import { Sparkles, MessageCircle, DollarSign, CheckCircle2, Circle, AlertCircle, ShoppingBag } from 'lucide-react';
-import { db, updateTaskStatus as updateDbTaskStatus } from '../firebase';
+import { db, updateTaskStatus as updateDbTaskStatus, setDoc, doc, addSale } from '../firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import CalendarWidget from './CalendarWidget';
 
 const ReceptionDashboard = () => {
-  const [tasks, setTasks] = useState([]); // Inicia vazio, será populado pelo Firebase
+  const [tasks, setTasks] = useState([]); 
   const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
+  
+  const [saleProduct, setSaleProduct] = useState('Açaí');
+  const [saleValue, setSaleValue] = useState('');
+  const [saleMethod, setSaleMethod] = useState('PIX');
+  const [isSavingSale, setIsSavingSale] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, 'tasks'), orderBy('createdAt', 'desc'));
@@ -17,24 +22,56 @@ const ReceptionDashboard = () => {
         dbTasks.push({ id: doc.id, ...doc.data() });
       });
       
-      const currentDay = new Date().getDay(); // 0 = Domingo, 1 = Segunda, ...
+      const currentDay = new Date().getDay(); 
+      const todayString = new Date().toISOString().split('T')[0];
       
-      // Filtra as rotinas do mockData baseadas no dia atual da semana
-      const todaysRoutines = initialTasks.filter(t => t.repeatDays && t.repeatDays.includes(currentDay));
+      const todaysRoutines = initialTasks
+        .filter(t => t.repeatDays && t.repeatDays.includes(currentDay))
+        .map(t => {
+           const specificId = `${t.id}_${todayString}`;
+           const existingInDb = dbTasks.find(dbT => dbT.id === specificId);
+           if (existingInDb) return existingInDb; // Se já foi interagido e salvo no DB hoje, use ele
+           return { ...t, id: specificId };
+        });
 
-      // Combina as rotinas de hoje com as demandas delegadas (que vêm do DB)
-      setTasks([...todaysRoutines, ...dbTasks]);
+      // Filtra dbTasks para não ter duplicidade com as rotinas diárias
+      const dbOnlyTasks = dbTasks.filter(dbT => !dbT.id.includes('_' + todayString));
+
+      setTasks([...todaysRoutines, ...dbOnlyTasks]);
     });
 
     return () => unsubscribe();
   }, []);
 
   const updateTaskStatus = async (id, newStatus) => {
-    // Se for uma tarefa mock (sem id do firebase), não atualiza no DB
-    if (id.startsWith('t')) {
-      setTasks(tasks.map(t => t.id === id ? { ...t, status: newStatus } : t));
+    // Agora se for uma rotina que não estava no DB, ela vai pro DB!
+    const taskData = tasks.find(t => t.id === id);
+    if (!taskData) return;
+
+    if (id.includes('_202')) { // É uma rotina diária (t1_2026-06-25)
+      await setDoc(doc(db, 'tasks', id), { ...taskData, status: newStatus });
     } else {
       await updateDbTaskStatus(id, newStatus);
+    }
+  };
+
+  const handleRegisterSale = async () => {
+    if (!saleValue) return;
+    setIsSavingSale(true);
+    try {
+      await addSale({
+        product: saleProduct,
+        value: saleValue,
+        method: saleMethod,
+        date: new Date().toLocaleDateString('pt-BR'),
+        time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      });
+      setIsStoreModalOpen(false);
+      setSaleValue('');
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSavingSale(false);
     }
   };
 
@@ -207,20 +244,35 @@ const ReceptionDashboard = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Produto Vendido</label>
-                <select className="w-full border border-gray-300 rounded-lg p-3 bg-gray-50">
+                <select 
+                  value={saleProduct}
+                  onChange={(e) => setSaleProduct(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg p-3 bg-gray-50"
+                >
                   <option>Açaí</option>
                   <option>Marmita Saudável</option>
                   <option>Energético / Bebida</option>
+                  <option>Camiseta Plur</option>
                   <option>Outros</option>
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Valor (R$)</label>
-                <input type="number" placeholder="Ex: 15,00" className="w-full border border-gray-300 rounded-lg p-3 bg-gray-50" />
+                <input 
+                  type="number" 
+                  placeholder="Ex: 15.00" 
+                  value={saleValue}
+                  onChange={(e) => setSaleValue(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg p-3 bg-gray-50" 
+                />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Forma de Pagamento</label>
-                <select className="w-full border border-gray-300 rounded-lg p-3 bg-gray-50">
+                <select 
+                  value={saleMethod}
+                  onChange={(e) => setSaleMethod(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg p-3 bg-gray-50"
+                >
                   <option>PIX</option>
                   <option>Cartão de Crédito</option>
                   <option>Cartão de Débito</option>
@@ -230,11 +282,18 @@ const ReceptionDashboard = () => {
             </div>
 
             <div className="flex gap-3 mt-8">
-              <button onClick={() => setIsStoreModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-lg font-bold transition">
+              <button 
+                onClick={() => { setIsStoreModalOpen(false); setSaleValue(''); }} 
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-lg font-bold transition"
+              >
                 Cancelar
               </button>
-              <button onClick={() => setIsStoreModalOpen(false)} className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-lg font-bold transition">
-                Registrar Venda
+              <button 
+                onClick={handleRegisterSale} 
+                disabled={isSavingSale || !saleValue}
+                className="flex-1 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-300 text-white py-3 rounded-lg font-bold transition"
+              >
+                {isSavingSale ? 'Registrando...' : 'Registrar Venda'}
               </button>
             </div>
           </div>

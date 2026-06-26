@@ -18,11 +18,34 @@ const OwnerDashboard = () => {
   const [adHocDate, setAdHocDate] = useState('');
   const [adHocTime, setAdHocTime] = useState('');
   
-  const [taskStatus, setTaskStatus] = useState('idle'); // 'idle' | 'saving' | 'success' | 'error'
+  const [taskStatus, setTaskStatus] = useState('idle');
   const [liveMetrics, setLiveMetrics] = useState({ routinesCompletedToday: 0 });
   const [showSalesModal, setShowSalesModal] = useState(false);
+  
+  const [sales, setSales] = useState([]); // Array de vendas vindo do Firebase
 
   const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+
+  // Listener em tempo real das vendas
+  useEffect(() => {
+    const q = query(collection(db, 'sales'));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const salesData = [];
+        snapshot.forEach((doc) => {
+          salesData.push({ id: doc.id, ...doc.data() });
+        });
+        salesData.sort((a, b) => {
+          if (!a.createdAt || !b.createdAt) return 0;
+          return b.createdAt.toMillis() - a.createdAt.toMillis();
+        });
+        setSales(salesData);
+      },
+      (err) => console.error('Firestore sales listener error:', err)
+    );
+    return () => unsubscribe();
+  }, []);
 
   // Listener em tempo real das tarefas para calcular % de produtividade
   useEffect(() => {
@@ -196,15 +219,18 @@ const OwnerDashboard = () => {
           <p className="text-xs text-slate-500 mb-5">Registradas pelo recepcionista hoje.</p>
 
           <div className="flex-1 space-y-3">
-            {recentSalesMock.map((sale) => (
+            {sales.slice(0, 5).map((sale) => (
               <div key={sale.id} className="flex items-center justify-between p-3 border border-slate-100 bg-slate-50 rounded-lg hover:shadow-sm transition">
                 <div>
                   <h4 className="font-bold text-slate-700 text-sm">{sale.product}</h4>
-                  <span className="text-xs text-slate-400">{sale.time} · {sale.method}</span>
+                  <span className="text-xs text-slate-400">{sale.date} · {sale.time} · {sale.method}</span>
                 </div>
                 <div className="font-black text-emerald-600 text-sm">R$ {sale.value}</div>
               </div>
             ))}
+            {sales.length === 0 && (
+              <p className="text-xs text-slate-400 italic text-center py-4">Nenhuma venda registrada.</p>
+            )}
           </div>
 
           <button 
@@ -255,7 +281,7 @@ const OwnerDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="text-sm">
-                  {allSalesMock.map((sale) => (
+                  {sales.map((sale) => (
                     <tr key={sale.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition">
                       <td className="py-4 text-slate-600">{sale.date} às {sale.time}</td>
                       <td className="py-4 font-semibold text-slate-700">{sale.product}</td>
@@ -267,13 +293,23 @@ const OwnerDashboard = () => {
                       <td className="py-4 font-black text-emerald-600 text-right">R$ {sale.value}</td>
                     </tr>
                   ))}
+                  {sales.length === 0 && (
+                    <tr>
+                      <td colSpan="4" className="py-6 text-center text-slate-400 text-sm">Nenhum registro encontrado.</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
 
             <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center rounded-b-2xl">
-              <span className="text-sm font-semibold text-slate-500">Total filtrado:</span>
-              <span className="text-2xl font-black text-emerald-600">R$ 155,00</span>
+              <span className="text-sm font-semibold text-slate-500">Total acumulado:</span>
+              <span className="text-2xl font-black text-emerald-600">
+                R$ {sales.reduce((acc, sale) => {
+                  const val = parseFloat(sale.value.replace(',', '.'));
+                  return acc + (isNaN(val) ? 0 : val);
+                }, 0).toFixed(2).replace('.', ',')}
+              </span>
             </div>
           </div>
         </div>
