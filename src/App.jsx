@@ -133,6 +133,8 @@ function App() {
   };
 
   const handleLogout = () => {
+    // Reseta a URL para / ao fazer logout, evitando que o próximo login abra a tela errada
+    window.location.hash = '/';
     setRole(null);
   };
 
@@ -167,6 +169,7 @@ function App() {
         {/* Main Content */}
         <main className="flex-1 overflow-auto">
           <Routes>
+            {/* Rota raiz: redireciona conforme o papel */}
             <Route
               path="/"
               element={
@@ -175,9 +178,24 @@ function App() {
                   : <Navigate to="/reception" replace />
               }
             />
-            <Route path="/reception" element={<ReceptionDashboard />} />
-            <Route path="/owner" element={<OwnerDashboard />} />
-            {/* Fallback */}
+            {/* Rotas protegidas: redireciona se tentar acessar rota errada */}
+            <Route
+              path="/reception"
+              element={
+                role === 'receptionist'
+                  ? <ReceptionDashboard />
+                  : <Navigate to="/owner" replace />
+              }
+            />
+            <Route
+              path="/owner"
+              element={
+                role === 'owner'
+                  ? <OwnerDashboard />
+                  : <Navigate to="/reception" replace />
+              }
+            />
+            {/* Qualquer outra URL: redireciona para o painel correto */}
             <Route
               path="*"
               element={
