@@ -21,3 +21,30 @@ export const auth = getAuth(app);
 
 // Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
+
+// --- Database Utilities ---
+import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
+
+export const addTask = async (taskData) => {
+  try {
+    const tasksRef = collection(db, 'tasks');
+    await addDoc(tasksRef, {
+      ...taskData,
+      createdAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error adding task: ", error);
+  }
+};
+
+export const updateTaskStatus = async (taskId, newStatus) => {
+  try {
+    const taskRef = doc(db, 'tasks', taskId);
+    await updateDoc(taskRef, {
+      status: newStatus,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error updating task status: ", error);
+  }
+};

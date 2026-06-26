@@ -1,13 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { initialTasks } from '../data/mockData';
 import { Sparkles, MessageCircle, DollarSign, CheckCircle2, Circle, AlertCircle, ShoppingBag } from 'lucide-react';
+import { db, updateTaskStatus as updateDbTaskStatus } from '../firebase';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 
 const ReceptionDashboard = () => {
-  const [tasks, setTasks] = useState(initialTasks);
+  const [tasks, setTasks] = useState([]); // Inicia vazio, será populado pelo Firebase
   const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
 
-  const updateTaskStatus = (id, newStatus) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, status: newStatus } : t));
+  useEffect(() => {
+    const q = query(collection(db, 'tasks'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const tasksData = [];
+      querySnapshot.forEach((doc) => {
+        tasksData.push({ id: doc.id, ...doc.data() });
+      });
+      // Se não houver dados, podemos usar o mockData como fallback inicial
+      setTasks(tasksData.length > 0 ? tasksData : initialTasks);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const updateTaskStatus = async (id, newStatus) => {
+    // Se for uma tarefa mock (sem id do firebase), não atualiza no DB
+    if (id.startsWith('t')) {
+      setTasks(tasks.map(t => t.id === id ? { ...t, status: newStatus } : t));
+    } else {
+      await updateDbTaskStatus(id, newStatus);
+    }
   };
 
   const getStatusColor = (status) => {

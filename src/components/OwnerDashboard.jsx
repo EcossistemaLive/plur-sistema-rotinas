@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { initialSales } from '../data/mockData';
 import { BarChart3, CalendarDays, TrendingUp, Users, Target, CheckCircle2, Clock, PlusCircle } from 'lucide-react';
+import { addTask, db } from '../firebase';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import CalendarWidget from './CalendarWidget';
 
 // Mock data for Owner metrics
 const metrics = {
@@ -19,7 +22,42 @@ const recentSalesMock = [
 
 const OwnerDashboard = () => {
   const [adHocTask, setAdHocTask] = useState('');
+  const [liveMetrics, setLiveMetrics] = useState({
+    routinesCompletedToday: 0
+  });
+
+  useEffect(() => {
+    const q = query(collection(db, 'tasks'));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      let total = 0;
+      let done = 0;
+      querySnapshot.forEach((doc) => {
+        total++;
+        if (doc.data().status === 'done') {
+          done++;
+        }
+      });
+      setLiveMetrics({
+        routinesCompletedToday: total > 0 ? Math.round((done / total) * 100) : 0
+      });
+    });
+    return () => unsubscribe();
+  }, []);
   
+  const handleAddAdHocTask = async () => {
+    if (!adHocTask.trim()) return;
+    
+    await addTask({
+      title: 'Demanda do Gestor (Ad-Hoc)',
+      category: 'Operacional',
+      status: 'todo',
+      description: adHocTask,
+      isRecurring: false,
+    });
+    
+    setAdHocTask(''); // Limpa o input
+  };
+
   return (
     <div className="p-6 h-full flex flex-col bg-slate-50 overflow-y-auto">
       <div className="flex justify-between items-center mb-8">
@@ -44,10 +82,10 @@ const OwnerDashboard = () => {
           </div>
           <div>
             <h3 className="text-slate-500 text-sm font-semibold">Rotinas Concluídas (Hoje)</h3>
-            <p className="text-3xl font-black text-slate-800">{metrics.routinesCompletedToday}%</p>
+            <p className="text-3xl font-black text-slate-800">{liveMetrics.routinesCompletedToday}%</p>
           </div>
           <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3">
-            <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${metrics.routinesCompletedToday}%` }}></div>
+            <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${liveMetrics.routinesCompletedToday}%` }}></div>
           </div>
         </div>
 
@@ -105,36 +143,17 @@ const OwnerDashboard = () => {
                 placeholder="Ex: Entrar em contato com o Contador Matheus para pedir faturamento..." 
                 className="flex-1 border border-slate-300 rounded-lg p-3 bg-slate-50 focus:ring-2 focus:ring-indigo-500 outline-none"
               />
-              <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-bold transition">
+              <button 
+                onClick={handleAddAdHocTask}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-bold transition"
+              >
                 Delegar p/ Recepção
               </button>
             </div>
             <p className="text-xs text-slate-400 mt-2">A tarefa aparecerá imediatamente na coluna "Para Hoje" no painel do recepcionista.</p>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
-            <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <BarChart3 className="text-slate-500" /> Acompanhamento de Rotinas Semanais
-            </h2>
-            {/* Simple CSS Bar Chart Mockup */}
-            <div className="space-y-4 mt-6">
-              {[
-                { day: 'Seg', val: 95 },
-                { day: 'Ter', val: 80 },
-                { day: 'Qua', val: 100 },
-                { day: 'Qui', val: 60 },
-                { day: 'Sex', val: 85 }
-              ].map(item => (
-                <div key={item.day} className="flex items-center gap-4">
-                  <span className="w-8 text-sm font-semibold text-slate-600">{item.day}</span>
-                  <div className="flex-1 bg-slate-100 rounded-full h-3">
-                    <div className={`h-3 rounded-full ${item.val === 100 ? 'bg-emerald-500' : item.val >= 80 ? 'bg-blue-500' : 'bg-orange-400'}`} style={{ width: `${item.val}%` }}></div>
-                  </div>
-                  <span className="w-10 text-sm font-bold text-slate-700 text-right">{item.val}%</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <CalendarWidget />
         </div>
 
         {/* Right Column: Vendas Avulsas (Store-in-Store) */}
