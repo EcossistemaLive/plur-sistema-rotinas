@@ -49,59 +49,87 @@ const ReceptionDashboard = () => {
     }
   };
 
-  const renderTaskCard = (task) => (
-    <div key={task.id} className={`bg-white p-4 rounded-lg shadow-sm border border-gray-100 border-l-4 ${getStatusColor(task.status)} mb-3 flex flex-col gap-3`}>
-      <div className="flex justify-between items-start">
-        <h4 className="font-bold text-gray-800">{task.title}</h4>
-        {getCategoryBadge(task.category)}
-      </div>
-      <p className="text-sm text-gray-600">{task.description}</p>
-      
-      {/* Detalhamento de Inadimplentes (Se for a tarefa de cobrança) */}
-      {task.students && (
-        <div className="bg-gray-50 p-3 rounded border border-gray-200 mt-2 space-y-3">
-          {task.students.map(student => (
-            <div key={student.id} className="flex flex-col gap-2 p-2 bg-white rounded border border-gray-100 shadow-sm">
-              <div className="flex justify-between items-center">
-                <span className="font-semibold text-gray-700">{student.name}</span>
-                <span className={`text-xs px-2 py-1 rounded-full ${student.tags.includes('descontraido') ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                  {student.tenure}
-                </span>
-              </div>
-              <p className="text-xs text-gray-500">{student.plan}</p>
-              <button className="flex items-center justify-center gap-1 w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-1.5 rounded-md text-xs font-medium transition">
-                <Sparkles size={14} />
-                Pedir Ajuda à Laila (Script {student.tags.includes('descontraido') ? 'Descontraído' : 'Neutro'})
-              </button>
-            </div>
-          ))}
-          <div className="flex items-center gap-2 text-red-600 bg-red-50 p-2 rounded text-xs font-semibold mt-2">
-            <AlertCircle size={16} />
-            Regra de Ouro: Ofereça Cartão de Crédito primeiro!
-          </div>
-        </div>
-      )}
+  const isTaskLateOrImminent = (date, time) => {
+    if (!date || !time) return false;
+    const now = new Date();
+    const taskDate = new Date(`${date}T${time}:00`);
+    // Se a data/hora for no passado ou nos próximos 15 minutos, e não estiver pronta
+    const diffMin = (taskDate - now) / 60000;
+    return diffMin <= 15;
+  };
 
-      {/* Ações de Status */}
-      <div className="flex gap-2 mt-auto pt-2 border-t border-gray-100">
-        {task.status !== 'todo' && (
-          <button onClick={() => updateTaskStatus(task.id, 'todo')} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700">
-            <Circle size={14} /> Fazer
-          </button>
+  const renderTaskCard = (task) => {
+    const isDelegated = task.source === 'gestor';
+    const isLate = isDelegated && task.status !== 'done' && isTaskLateOrImminent(task.dueDate, task.dueTime);
+
+    return (
+      <div key={task.id} className={`bg-white p-4 rounded-lg shadow-sm border border-gray-100 border-l-4 ${getStatusColor(task.status)} mb-3 flex flex-col gap-3 relative overflow-hidden`}>
+        {isLate && (
+          <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg flex items-center gap-1 animate-pulse">
+            <AlertCircle size={10} /> Urgente
+          </div>
         )}
-        {task.status !== 'in_progress' && (
-          <button onClick={() => updateTaskStatus(task.id, 'in_progress')} className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700">
-            <MessageCircle size={14} /> Em Andamento
-          </button>
+
+        <div className="flex justify-between items-start mt-1">
+          <h4 className={`font-bold ${isLate ? 'text-red-700' : 'text-gray-800'}`}>{task.title}</h4>
+          {getCategoryBadge(task.category)}
+        </div>
+        
+        {isDelegated && (task.dueDate || task.dueTime) && (
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 w-fit px-2 py-1 rounded">
+            <Sparkles size={12} />
+            Agendado para: {task.dueDate ? new Date(task.dueDate + 'T12:00:00').toLocaleDateString('pt-BR').substring(0,5) : 'Hoje'} {task.dueTime ? `às ${task.dueTime}` : ''}
+          </div>
         )}
-        {task.status !== 'done' && (
-          <button onClick={() => updateTaskStatus(task.id, 'done')} className="flex items-center gap-1 text-xs text-green-500 hover:text-green-700 ml-auto font-medium">
-            <CheckCircle2 size={16} /> Concluir
-          </button>
+
+        <p className="text-sm text-gray-600">{task.description}</p>
+        
+        {/* Detalhamento de Inadimplentes (Se for a tarefa de cobrança) */}
+        {task.students && (
+          <div className="bg-gray-50 p-3 rounded border border-gray-200 mt-2 space-y-3">
+            {task.students.map(student => (
+              <div key={student.id} className="flex flex-col gap-2 p-2 bg-white rounded border border-gray-100 shadow-sm">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-gray-700">{student.name}</span>
+                  <span className={`text-xs px-2 py-1 rounded-full ${student.tags.includes('descontraido') ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                    {student.tenure}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500">{student.plan}</p>
+                <button className="flex items-center justify-center gap-1 w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-1.5 rounded-md text-xs font-medium transition">
+                  <Sparkles size={14} />
+                  Pedir Ajuda à Laila (Script {student.tags.includes('descontraido') ? 'Descontraído' : 'Neutro'})
+                </button>
+              </div>
+            ))}
+            <div className="flex items-center gap-2 text-red-600 bg-red-50 p-2 rounded text-xs font-semibold mt-2">
+              <AlertCircle size={16} />
+              Regra de Ouro: Ofereça Cartão de Crédito primeiro!
+            </div>
+          </div>
         )}
+
+        {/* Ações de Status */}
+        <div className="flex gap-2 mt-auto pt-2 border-t border-gray-100">
+          {task.status !== 'todo' && (
+            <button onClick={() => updateTaskStatus(task.id, 'todo')} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700">
+              <Circle size={14} /> Fazer
+            </button>
+          )}
+          {task.status !== 'in_progress' && (
+            <button onClick={() => updateTaskStatus(task.id, 'in_progress')} className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700">
+              <MessageCircle size={14} /> Em Andamento
+            </button>
+          )}
+          {task.status !== 'done' && (
+            <button onClick={() => updateTaskStatus(task.id, 'done')} className="flex items-center gap-1 text-xs text-green-500 hover:text-green-700 ml-auto font-medium">
+              <CheckCircle2 size={16} /> Concluir
+            </button>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="p-6 h-full flex flex-col bg-gray-50">
