@@ -12,12 +12,18 @@ const ReceptionDashboard = () => {
   useEffect(() => {
     const q = query(collection(db, 'tasks'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const tasksData = [];
+      const dbTasks = [];
       querySnapshot.forEach((doc) => {
-        tasksData.push({ id: doc.id, ...doc.data() });
+        dbTasks.push({ id: doc.id, ...doc.data() });
       });
-      // Se não houver dados, podemos usar o mockData como fallback inicial
-      setTasks(tasksData.length > 0 ? tasksData : initialTasks);
+      
+      const currentDay = new Date().getDay(); // 0 = Domingo, 1 = Segunda, ...
+      
+      // Filtra as rotinas do mockData baseadas no dia atual da semana
+      const todaysRoutines = initialTasks.filter(t => t.repeatDays && t.repeatDays.includes(currentDay));
+
+      // Combina as rotinas de hoje com as demandas delegadas (que vêm do DB)
+      setTasks([...todaysRoutines, ...dbTasks]);
     });
 
     return () => unsubscribe();

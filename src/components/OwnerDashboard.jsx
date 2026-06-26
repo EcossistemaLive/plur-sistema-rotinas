@@ -10,19 +10,8 @@ const metrics = {
   conversionRate: 62,
 };
 
-const recentSalesMock = [
-  { id: 'v1', product: 'Açaí', value: '15,00', method: 'PIX', time: '10:45', date: '2026-06-26' },
-  { id: 'v2', product: 'Energético', value: '10,00', method: 'Cartão de Débito', time: '12:30', date: '2026-06-26' },
-  { id: 'v3', product: 'Marmita Saudável', value: '25,00', method: 'PIX', time: '13:15', date: '2026-06-26' },
-];
-
-const allSalesMock = [
-  ...recentSalesMock,
-  { id: 'v4', product: 'Camiseta Plur', value: '85,00', method: 'PIX', time: '16:00', date: '2026-06-25' },
-  { id: 'v5', product: 'Energético', value: '10,00', method: 'PIX', time: '18:20', date: '2026-06-25' },
-  { id: 'v6', product: 'Marmita Saudável', value: '25,00', method: 'Cartão de Crédito', time: '09:10', date: '2026-06-24' },
-  { id: 'v7', product: 'Açaí', value: '20,00', method: 'PIX', time: '11:30', date: '2026-06-24' },
-];
+const recentSalesMock = [];
+const allSalesMock = [];
 
 const OwnerDashboard = () => {
   const [adHocTask, setAdHocTask] = useState('');

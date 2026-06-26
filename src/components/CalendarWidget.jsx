@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db, addEvent } from '../firebase';
 import { Calendar as CalendarIcon, Plus } from 'lucide-react';
+import { initialTasks } from '../data/mockData';
 
 const CalendarWidget = () => {
   const [date, setDate] = useState(new Date());
@@ -32,7 +33,7 @@ const CalendarWidget = () => {
     return () => unsubscribe();
   }, []);
 
-  // Escuta a coleção tasks para exibir demandas e rotinas no calendário
+  // Escuta a coleção tasks para exibir demandas delegadas no calendário
   useEffect(() => {
     const q = query(collection(db, 'tasks'));
     const unsubscribe = onSnapshot(
@@ -79,16 +80,28 @@ const CalendarWidget = () => {
 
   const selectedDateString = toLocalDateString(date);
   const selectedDayEvents = events.filter((e) => e.date === selectedDateString);
-  const selectedDayTasks = tasks.filter((t) => t.dueDate === selectedDateString || t.isRecurring);
+  const selectedDayOfWeek = date.getDay(); // 0 = Domingo, 1 = Segunda, ...
+
+  // Demandas delegadas (do firebase) agendadas para o dia selecionado
+  const selectedDayTasks = tasks.filter((t) => t.dueDate === selectedDateString);
+  
+  // Rotinas do mockData agendadas para o dia da semana selecionado
+  const selectedDayRoutines = initialTasks.filter((t) => t.repeatDays && t.repeatDays.includes(selectedDayOfWeek));
 
   const combinedItems = [
     ...selectedDayEvents.map(e => ({ ...e, isTask: false })),
     ...selectedDayTasks.map(t => ({ 
       id: t.id, 
       title: t.title, 
-      type: t.isRecurring ? 'Rotina' : 'Demanda', 
+      type: 'Demanda', 
       time: t.dueTime, 
       isTask: true 
+    })),
+    ...selectedDayRoutines.map(t => ({
+      id: t.id,
+      title: t.title,
+      type: 'Rotina',
+      isTask: true
     }))
   ];
 
@@ -96,12 +109,16 @@ const CalendarWidget = () => {
   const tileContent = ({ date: tileDate, view }) => {
     if (view === 'month') {
       const dString = toLocalDateString(tileDate);
+      const dayOfWeek = tileDate.getDay();
+      
       const dayEvents = events.filter((e) => e.date === dString);
-      const dayTasks = tasks.filter((t) => t.dueDate === dString || t.isRecurring);
+      const dayTasks = tasks.filter((t) => t.dueDate === dString);
+      const dayRoutines = initialTasks.filter((t) => t.repeatDays && t.repeatDays.includes(dayOfWeek));
       
       const dots = [
         ...dayEvents,
-        ...dayTasks.map(t => ({ type: t.isRecurring ? 'Rotina' : 'Demanda' }))
+        ...dayTasks.map(t => ({ type: 'Demanda' })),
+        ...dayRoutines.map(t => ({ type: 'Rotina' }))
       ];
 
       if (dots.length > 0) {
