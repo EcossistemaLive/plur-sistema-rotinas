@@ -6,7 +6,7 @@ export const initialTasks = [
     status: 'todo',
     description: 'Verificar se visitantes e alunos de capoeira estão com Plano Custo R$ 0,00 no sistema para não travar a catraca indevidamente.',
     isRecurring: true,
-    repeatDays: [1, 2, 3, 4, 5], // Seg a Sex
+    repeatDays: [1], // Somente Segunda-feira
     source: 'routine'
   },
   {
