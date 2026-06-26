@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { initialTasks } from '../data/mockData';
 import { Sparkles, MessageCircle, DollarSign, CheckCircle2, Circle, AlertCircle, ShoppingBag } from 'lucide-react';
-import { db, updateTaskStatus as updateDbTaskStatus, setDoc, doc, addSale } from '../firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { db, updateTaskStatus as updateDbTaskStatus, addSale } from '../firebase';
+import { collection, onSnapshot, query, orderBy, setDoc, doc } from 'firebase/firestore';
 import CalendarWidget from './CalendarWidget';
 
 const ReceptionDashboard = () => {
@@ -18,8 +18,8 @@ const ReceptionDashboard = () => {
     const q = query(collection(db, 'tasks'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const dbTasks = [];
-      querySnapshot.forEach((doc) => {
-        dbTasks.push({ id: doc.id, ...doc.data() });
+      querySnapshot.forEach((document) => {
+        dbTasks.push({ id: document.id, ...document.data() });
       });
       
       const currentDay = new Date().getDay(); 
@@ -44,14 +44,20 @@ const ReceptionDashboard = () => {
   }, []);
 
   const updateTaskStatus = async (id, newStatus) => {
-    // Agora se for uma rotina que não estava no DB, ela vai pro DB!
-    const taskData = tasks.find(t => t.id === id);
-    if (!taskData) return;
+    try {
+      const taskData = tasks.find(t => t.id === id);
+      if (!taskData) return;
 
-    if (id.includes('_202')) { // É uma rotina diária (t1_2026-06-25)
-      await setDoc(doc(db, 'tasks', id), { ...taskData, status: newStatus });
-    } else {
-      await updateDbTaskStatus(id, newStatus);
+      if (id.includes('_202')) { // É uma rotina diária
+        // Remove undefined values to avoid firebase errors just in case
+        const cleanData = JSON.parse(JSON.stringify(taskData));
+        await setDoc(doc(db, 'tasks', id), { ...cleanData, status: newStatus }, { merge: true });
+      } else {
+        await updateDbTaskStatus(id, newStatus);
+      }
+    } catch (error) {
+      console.error('Error updating task:', error);
+      alert('Erro ao atualizar: ' + error.message);
     }
   };
 
