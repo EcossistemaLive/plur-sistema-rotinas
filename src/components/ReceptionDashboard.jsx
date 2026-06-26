@@ -207,9 +207,9 @@ const ReceptionDashboard = () => {
       </div>
 
       {/* Kanban Board */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 overflow-hidden">
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 md:overflow-hidden">
         {/* Coluna: Para Hoje */}
-        <div className="flex flex-col bg-gray-100 rounded-xl p-4 h-full">
+        <div className="flex flex-col bg-gray-100 rounded-xl p-4 min-h-[400px] md:h-full">
           <h3 className="font-bold text-gray-700 mb-4 flex items-center gap-2">
             <Circle size={18} className="text-gray-400" />
             Para Hoje ({tasks.filter(t => t.status === 'todo').length})
@@ -220,7 +220,7 @@ const ReceptionDashboard = () => {
         </div>
 
         {/* Coluna: Em Andamento */}
-        <div className="flex flex-col bg-blue-50 rounded-xl p-4 h-full border border-blue-100">
+        <div className="flex flex-col bg-blue-50 rounded-xl p-4 min-h-[400px] md:h-full border border-blue-100">
           <h3 className="font-bold text-blue-800 mb-4 flex items-center gap-2">
             <MessageCircle size={18} className="text-blue-500" />
             Em Andamento ({tasks.filter(t => t.status === 'in_progress').length})
@@ -231,7 +231,7 @@ const ReceptionDashboard = () => {
         </div>
 
         {/* Coluna: Concluído */}
-        <div className="flex flex-col bg-green-50 rounded-xl p-4 h-full border border-green-100">
+        <div className="flex flex-col bg-green-50 rounded-xl p-4 min-h-[400px] md:h-full border border-green-100">
           <h3 className="font-bold text-green-800 mb-4 flex items-center gap-2">
             <CheckCircle2 size={18} className="text-green-500" />
             Concluído ({tasks.filter(t => t.status === 'done').length})

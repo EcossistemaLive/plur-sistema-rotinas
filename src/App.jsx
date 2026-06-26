@@ -50,8 +50,8 @@ const Login = ({ onLogin }) => {
       <div className="w-full max-w-sm px-4">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 mb-4">
-            <span className="text-3xl font-black text-white tracking-tighter">P</span>
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 mb-4 overflow-hidden shadow-xl">
+            <img src="./logo-plur.jpg" alt="Logo Plur" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-3xl font-black text-white tracking-tight">PLUR</h1>
           <p className="text-indigo-300 text-sm mt-1">Sistema de Rotinas</p>
@@ -133,7 +133,6 @@ function App() {
   };
 
   const handleLogout = () => {
-    // Reseta a URL para / ao fazer logout, evitando que o próximo login abra a tela errada
     window.location.hash = '/';
     setRole(null);
   };
@@ -144,9 +143,15 @@ function App() {
 
   return (
     <Router>
-      <div className="min-h-screen bg-gray-50 flex">
-        {/* Sidebar */}
-        <aside className="w-56 bg-white border-r border-gray-200 p-6 flex flex-col flex-shrink-0">
+      <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+        {/* Sidebar Mobile Top Bar */}
+        <div className="md:hidden bg-white border-b border-gray-200 p-4 flex justify-between items-center">
+          <div className="text-xl font-black text-gray-800 tracking-tight">PLUR</div>
+          <button onClick={handleLogout} className="text-sm font-bold text-red-500 bg-red-50 px-3 py-1.5 rounded-lg">Sair</button>
+        </div>
+
+        {/* Sidebar Desktop */}
+        <aside className="hidden md:flex w-56 bg-white border-r border-gray-200 p-6 flex-col flex-shrink-0">
           <div className="text-2xl font-black text-gray-800 tracking-tight mb-8">
             PLUR
           </div>
