@@ -3,6 +3,7 @@ import { initialTasks } from '../data/mockData';
 import { Sparkles, MessageCircle, DollarSign, CheckCircle2, Circle, AlertCircle, ShoppingBag } from 'lucide-react';
 import { db, updateTaskStatus as updateDbTaskStatus } from '../firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import CalendarWidget from './CalendarWidget';
 
 const ReceptionDashboard = () => {
   const [tasks, setTasks] = useState([]); // Inicia vazio, será populado pelo Firebase
@@ -233,6 +234,12 @@ const ReceptionDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Calendário da Recepção */}
+      <div className="mt-8">
+        <CalendarWidget />
+      </div>
+
     </div>
   );
 };

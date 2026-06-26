@@ -8,12 +8,13 @@ import { Calendar as CalendarIcon, Plus } from 'lucide-react';
 const CalendarWidget = () => {
   const [date, setDate] = useState(new Date());
   const [events, setEvents] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [newEventTitle, setNewEventTitle] = useState('');
   const [newEventType, setNewEventType] = useState('Pessoal');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
 
-  // Escuta a coleção events — sem orderBy para evitar erro de índice
+  // Escuta a coleção events
   useEffect(() => {
     const q = query(collection(db, 'events'));
     const unsubscribe = onSnapshot(
@@ -23,20 +24,32 @@ const CalendarWidget = () => {
         querySnapshot.forEach((doc) => {
           eventsData.push({ id: doc.id, ...doc.data() });
         });
-        // Ordena no lado do cliente por data
         eventsData.sort((a, b) => (a.date > b.date ? 1 : -1));
         setEvents(eventsData);
       },
-      (err) => {
-        console.error('Firestore events error:', err);
-      }
+      (err) => console.error('Firestore events error:', err)
     );
+    return () => unsubscribe();
+  }, []);
 
+  // Escuta a coleção tasks para exibir demandas e rotinas no calendário
+  useEffect(() => {
+    const q = query(collection(db, 'tasks'));
+    const unsubscribe = onSnapshot(
+      q,
+      (querySnapshot) => {
+        const tasksData = [];
+        querySnapshot.forEach((doc) => {
+          tasksData.push({ id: doc.id, ...doc.data() });
+        });
+        setTasks(tasksData);
+      },
+      (err) => console.error('Firestore tasks error:', err)
+    );
     return () => unsubscribe();
   }, []);
 
   const toLocalDateString = (d) => {
-    // Evita bug de fuso horário (toISOString retorna UTC)
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
@@ -58,8 +71,7 @@ const CalendarWidget = () => {
       setSaveMsg('✅ Compromisso salvo!');
       setTimeout(() => setSaveMsg(''), 3000);
     } catch (error) {
-      setSaveMsg('❌ Erro ao salvar. Verifique a conexão.');
-      console.error(error);
+      setSaveMsg('❌ Erro ao salvar.');
     } finally {
       setIsSaving(false);
     }
@@ -67,26 +79,44 @@ const CalendarWidget = () => {
 
   const selectedDateString = toLocalDateString(date);
   const selectedDayEvents = events.filter((e) => e.date === selectedDateString);
+  const selectedDayTasks = tasks.filter((t) => t.dueDate === selectedDateString || t.isRecurring);
 
-  // Bolinhas coloridas nos dias com eventos
+  const combinedItems = [
+    ...selectedDayEvents.map(e => ({ ...e, isTask: false })),
+    ...selectedDayTasks.map(t => ({ 
+      id: t.id, 
+      title: t.title, 
+      type: t.isRecurring ? 'Rotina' : 'Demanda', 
+      time: t.dueTime, 
+      isTask: true 
+    }))
+  ];
+
+  // Bolinhas coloridas nos dias com eventos/tarefas
   const tileContent = ({ date: tileDate, view }) => {
     if (view === 'month') {
       const dString = toLocalDateString(tileDate);
       const dayEvents = events.filter((e) => e.date === dString);
-      if (dayEvents.length > 0) {
+      const dayTasks = tasks.filter((t) => t.dueDate === dString || t.isRecurring);
+      
+      const dots = [
+        ...dayEvents,
+        ...dayTasks.map(t => ({ type: t.isRecurring ? 'Rotina' : 'Demanda' }))
+      ];
+
+      if (dots.length > 0) {
+        // Mostra no max 3 bolinhas para não poluir
         return (
           <div className="flex justify-center mt-0.5 gap-0.5 flex-wrap">
-            {dayEvents.slice(0, 3).map((e, i) => (
+            {dots.slice(0, 3).map((e, i) => (
               <div
                 key={i}
                 className={`w-1.5 h-1.5 rounded-full ${
-                  e.type === 'Aula'
-                    ? 'bg-orange-500'
-                    : e.type === 'Fisioterapia'
-                    ? 'bg-blue-500'
-                    : e.type === 'Evento'
-                    ? 'bg-purple-500'
-                    : 'bg-slate-400'
+                  e.type === 'Aula' ? 'bg-orange-500' : 
+                  e.type === 'Fisioterapia' ? 'bg-blue-500' : 
+                  e.type === 'Evento' ? 'bg-purple-500' : 
+                  e.type === 'Demanda' ? 'bg-indigo-500' :
+                  e.type === 'Rotina' ? 'bg-slate-400' : 'bg-slate-400'
                 }`}
               />
             ))}
@@ -99,14 +129,12 @@ const CalendarWidget = () => {
 
   const getTypeColor = (type) => {
     switch (type) {
-      case 'Aula':
-        return 'border-orange-500 text-orange-700 bg-orange-50';
-      case 'Fisioterapia':
-        return 'border-blue-500 text-blue-700 bg-blue-50';
-      case 'Evento':
-        return 'border-purple-500 text-purple-700 bg-purple-50';
-      default:
-        return 'border-slate-400 text-slate-700 bg-slate-50';
+      case 'Aula': return 'border-orange-500 text-orange-700 bg-orange-50';
+      case 'Fisioterapia': return 'border-blue-500 text-blue-700 bg-blue-50';
+      case 'Evento': return 'border-purple-500 text-purple-700 bg-purple-50';
+      case 'Demanda': return 'border-indigo-500 text-indigo-700 bg-indigo-50';
+      case 'Rotina': return 'border-slate-400 text-slate-700 bg-slate-50';
+      default: return 'border-slate-400 text-slate-700 bg-slate-50';
     }
   };
 
@@ -136,19 +164,19 @@ const CalendarWidget = () => {
               📅 {date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
             </h3>
             <div className="space-y-2 min-h-[80px]">
-              {selectedDayEvents.length === 0 ? (
+              {combinedItems.length === 0 ? (
                 <p className="text-sm text-slate-400 italic">
                   Nenhum compromisso neste dia.
                 </p>
               ) : (
-                selectedDayEvents.map((evt) => (
+                combinedItems.map((evt) => (
                   <div
                     key={evt.id}
                     className={`p-3 rounded-lg border-l-4 ${getTypeColor(evt.type)}`}
                   >
                     <div className="font-semibold text-sm">{evt.title}</div>
                     <div className="text-xs mt-0.5 font-bold uppercase tracking-wider opacity-60">
-                      {evt.type}
+                      {evt.type} {evt.time ? `• ${evt.time}` : ''}
                     </div>
                   </div>
                 ))
@@ -196,11 +224,12 @@ const CalendarWidget = () => {
           </div>
 
           {/* Legenda */}
-          <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+          <div className="flex flex-wrap gap-2 text-xs text-slate-500 mt-2">
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500 inline-block"/> Aula</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block"/> Fisio</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-500 inline-block"/> Evento</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-400 inline-block"/> Pessoal</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-400 inline-block"/> Pessoal / Rotina</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-500 inline-block"/> Demanda Delegada</span>
           </div>
         </div>
       </div>
