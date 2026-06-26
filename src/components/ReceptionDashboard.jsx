@@ -143,11 +143,11 @@ const ReceptionDashboard = () => {
           </div>
         </div>
 
-        {/* Coluna: Concluído */}
+        {/* Coluna: Concluido */}
         <div className="flex flex-col bg-green-50 rounded-xl p-4 h-full border border-green-100">
           <h3 className="font-bold text-green-800 mb-4 flex items-center gap-2">
             <CheckCircle2 size={18} className="text-green-500" />
-            Concluído ({tasks.filter(t => t.status === 'done').length})
+            ✅ Concluido ({tasks.filter(t => t.status === 'done').length})
           </h3>
           <div className="flex-1 overflow-y-auto pr-2">
             {tasks.filter(t => t.status === 'done').map(renderTaskCard)}
