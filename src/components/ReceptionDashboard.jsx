@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { initialTasks } from '../data/mockData';
 import { Sparkles, MessageCircle, DollarSign, CheckCircle2, Circle, AlertCircle, ShoppingBag } from 'lucide-react';
 import { db, updateTaskStatus as updateDbTaskStatus, addSale } from '../firebase';
-import { collection, onSnapshot, query, orderBy, setDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, setDoc, doc, serverTimestamp } from 'firebase/firestore';
 import CalendarWidget from './CalendarWidget';
 
 const ReceptionDashboard = () => {
@@ -48,10 +48,19 @@ const ReceptionDashboard = () => {
       const taskData = tasks.find(t => t.id === id);
       if (!taskData) return;
 
+      // Otimista (Muda na hora na tela sem esperar a internet)
+      setTasks(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
+
       if (id.includes('_202')) { // É uma rotina diária
-        // Remove undefined values to avoid firebase errors just in case
         const cleanData = JSON.parse(JSON.stringify(taskData));
-        await setDoc(doc(db, 'tasks', id), { ...cleanData, status: newStatus }, { merge: true });
+        delete cleanData.id; // Não precisamos salvar o id dentro do documento
+        
+        const dataToSave = { ...cleanData, status: newStatus };
+        if (!dataToSave.createdAt) {
+          dataToSave.createdAt = serverTimestamp(); // Extremamente importante para não ser excluído da query!
+        }
+        
+        await setDoc(doc(db, 'tasks', id), dataToSave, { merge: true });
       } else {
         await updateDbTaskStatus(id, newStatus);
       }
