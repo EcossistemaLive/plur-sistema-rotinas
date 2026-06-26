@@ -16,7 +16,7 @@ export const initialTasks = [
     status: 'todo',
     description: 'Abordar alunos inativos. Lembre-se: A primeira opção SEMPRE deve ser Cartão de Crédito. Recorrência manual é a última opção.',
     isRecurring: true,
-    repeatDays: [1, 3], // Seg e Qua
+    repeatDays: [1, 2, 3, 4, 5], // Seg a Sex
     source: 'routine',
     students: [
       { id: 's1', name: 'João Silva', tenure: 'Novato (1 mês)', plan: 'Cross 3x Mensal', tags: ['neutro'] },
@@ -30,7 +30,7 @@ export const initialTasks = [
     status: 'todo',
     description: 'Enviar mensagens para os novos seguidores no Instagram. Usar tom convidativo ("flerte comercial").',
     isRecurring: true,
-    repeatDays: [2, 4], // Ter e Qui
+    repeatDays: [1, 2, 3, 4, 5], // Seg a Sex
     source: 'routine'
   },
   {
@@ -41,16 +41,6 @@ export const initialTasks = [
     description: 'Fazer a contagem de estoque da geladeira de bebidas (Açaí, Marmitas, Energéticos) ao fechar a academia e conciliar o PIX.',
     isRecurring: true,
     repeatDays: [1, 2, 3, 4, 5], // Seg a Sex
-    source: 'routine'
-  },
-  {
-    id: 't5',
-    title: 'Organização Geral da Recepção',
-    category: 'Operacional',
-    status: 'todo',
-    description: 'Limpeza e organização de todos os papéis, reposição de canetas e materiais para o fim de semana.',
-    isRecurring: true,
-    repeatDays: [5], // Sexta
     source: 'routine'
   }
 ];
